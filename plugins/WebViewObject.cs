@@ -1,15 +1,15 @@
 /*
  * Copyright (C) 2011 Keijiro Takahashi
  * Copyright (C) 2012 GREE, Inc.
- * 
+ *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
  * arising from the use of this software.
- * 
+ *
  * Permission is granted to anyone to use this software for any purpose,
  * including commercial applications, and to alter it and redistribute it
  * freely, subject to the following restrictions:
- * 
+ *
  * 1. The origin of this software must not be misrepresented; you must not
  *    claim that you wrote the original software. If you use this software
  *    in a product, an acknowledgment in the product documentation would be
@@ -88,7 +88,7 @@ public class WebViewObject : MonoBehaviour
     IntPtr webView;
 #elif UNITY_ANDROID
     AndroidJavaObject webView;
-    
+
     bool mVisibility;
     int mKeyboardVisibleHeight;
     float mResumedTimestamp;
@@ -97,7 +97,7 @@ public class WebViewObject : MonoBehaviour
     float androidNetworkReachabilityCheckT0 = -1.0f;
     NetworkReachability? androidNetworkReachability0 = null;
 #endif
-    
+
     void OnApplicationPause(bool paused)
     {
         this.paused = paused;
@@ -160,7 +160,8 @@ public class WebViewObject : MonoBehaviour
             mLastScreenHeight = Screen.height;
             webView.Call("EvaluateJS", "(function() {var e = document.activeElement; if (e != null && e.tagName.toLowerCase() != 'body') {e.blur(); e.focus();}})()");
         }
-        for (;;) {
+        for (; ; )
+        {
             if (webView == null)
                 break;
             var s = webView.Call<String>("GetMessage");
@@ -169,34 +170,35 @@ public class WebViewObject : MonoBehaviour
             var i = s.IndexOf(':', 0);
             if (i == -1)
                 continue;
-            switch (s.Substring(0, i)) {
-            case "CallFromJS":
-                CallFromJS(s.Substring(i + 1));
-                break;
-            case "CallOnError":
-                CallOnError(s.Substring(i + 1));
-                break;
-            case "CallOnHttpError":
-                CallOnHttpError(s.Substring(i + 1));
-                break;
-            case "CallOnLoaded":
-                CallOnLoaded(s.Substring(i + 1));
-                break;
-            case "CallOnStarted":
-                CallOnStarted(s.Substring(i + 1));
-                break;
-            case "CallOnHooked":
-                CallOnHooked(s.Substring(i + 1));
-                break;
-            case "CallOnCookies":
-                CallOnCookies(s.Substring(i + 1));
-                break;
-            case "SetKeyboardVisible":
-                SetKeyboardVisible(s.Substring(i + 1));
-                break;
-            case "RequestFileChooserPermissions":
-                RequestFileChooserPermissions();
-                break;
+            switch (s.Substring(0, i))
+            {
+                case "CallFromJS":
+                    CallFromJS(s.Substring(i + 1));
+                    break;
+                case "CallOnError":
+                    CallOnError(s.Substring(i + 1));
+                    break;
+                case "CallOnHttpError":
+                    CallOnHttpError(s.Substring(i + 1));
+                    break;
+                case "CallOnLoaded":
+                    CallOnLoaded(s.Substring(i + 1));
+                    break;
+                case "CallOnStarted":
+                    CallOnStarted(s.Substring(i + 1));
+                    break;
+                case "CallOnHooked":
+                    CallOnHooked(s.Substring(i + 1));
+                    break;
+                case "CallOnCookies":
+                    CallOnCookies(s.Substring(i + 1));
+                    break;
+                case "SetKeyboardVisible":
+                    SetKeyboardVisible(s.Substring(i + 1));
+                    break;
+                case "RequestFileChooserPermissions":
+                    RequestFileChooserPermissions();
+                    break;
             }
         }
     }
@@ -216,47 +218,58 @@ public class WebViewObject : MonoBehaviour
             SetMargins(mMarginLeft, mMarginTop, mMarginRight, mMarginBottom, mMarginRelative);
         }
     }
-    
+
     /// Called from Java native plugin to request permissions for the file chooser.
     public void RequestFileChooserPermissions()
     {
+        int prevGrantedCount = 0;
+
         var permissions = new List<string>();
         using (var version = new AndroidJavaClass("android.os.Build$VERSION"))
         {
             if (version.GetStatic<int>("SDK_INT") >= 33)
             {
-                if (!Permission.HasUserAuthorizedPermission("android.permission.READ_MEDIA_IMAGES"))
+                if (Permission.HasUserAuthorizedPermission("android.permission.READ_MEDIA_IMAGES") == false)
                 {
                     permissions.Add("android.permission.READ_MEDIA_IMAGES");
                 }
-                if (!Permission.HasUserAuthorizedPermission("android.permission.READ_MEDIA_VIDEO"))
+                else { prevGrantedCount++; }
+
+                if (Permission.HasUserAuthorizedPermission("android.permission.READ_MEDIA_VIDEO") == false)
                 {
                     permissions.Add("android.permission.READ_MEDIA_VIDEO");
                 }
-                if (!Permission.HasUserAuthorizedPermission("android.permission.READ_MEDIA_AUDIO"))
+                else { prevGrantedCount++; }
+
+                if (Permission.HasUserAuthorizedPermission("android.permission.READ_MEDIA_AUDIO") == false)
                 {
                     permissions.Add("android.permission.READ_MEDIA_AUDIO");
                 }
+                else { prevGrantedCount++; }
             }
             else
             {
-                if (!Permission.HasUserAuthorizedPermission(Permission.ExternalStorageRead))
+                if (Permission.HasUserAuthorizedPermission(Permission.ExternalStorageRead) == false)
                 {
                     permissions.Add(Permission.ExternalStorageRead);
                 }
-                if (!Permission.HasUserAuthorizedPermission(Permission.ExternalStorageWrite))
+                else { prevGrantedCount++; }
+
+                if (Permission.HasUserAuthorizedPermission(Permission.ExternalStorageWrite) == false)
                 {
                     permissions.Add(Permission.ExternalStorageWrite);
                 }
             }
         }
-        if (!Permission.HasUserAuthorizedPermission(Permission.Camera))
+
+        if (Permission.HasUserAuthorizedPermission(Permission.Camera) == false)
         {
             permissions.Add(Permission.Camera);
         }
+        else { prevGrantedCount++; }
+
         if (permissions.Count > 0)
         {
-#if UNITY_2020_2_OR_NEWER
             var grantedCount = 0;
             var deniedCount = 0;
             var callbacks = new PermissionCallbacks();
@@ -265,7 +278,7 @@ public class WebViewObject : MonoBehaviour
                 grantedCount++;
                 if (grantedCount + deniedCount == permissions.Count)
                 {
-                    StartCoroutine(CallOnRequestFileChooserPermissionsResult(grantedCount == permissions.Count));
+                    StartCoroutine(CallOnRequestFileChooserPermissionsResult(prevGrantedCount, grantedCount));
                 }
             };
             callbacks.PermissionDenied += (permission) =>
@@ -273,7 +286,7 @@ public class WebViewObject : MonoBehaviour
                 deniedCount++;
                 if (grantedCount + deniedCount == permissions.Count)
                 {
-                    StartCoroutine(CallOnRequestFileChooserPermissionsResult(grantedCount == permissions.Count));
+                    StartCoroutine(CallOnRequestFileChooserPermissionsResult(prevGrantedCount, grantedCount));
                 }
             };
             callbacks.PermissionDeniedAndDontAskAgain += (permission) =>
@@ -281,82 +294,26 @@ public class WebViewObject : MonoBehaviour
                 deniedCount++;
                 if (grantedCount + deniedCount == permissions.Count)
                 {
-                    StartCoroutine(CallOnRequestFileChooserPermissionsResult(grantedCount == permissions.Count));
+                    StartCoroutine(CallOnRequestFileChooserPermissionsResult(prevGrantedCount, grantedCount));
                 }
             };
             Permission.RequestUserPermissions(permissions.ToArray(), callbacks);
-#else
-            StartCoroutine(RequestFileChooserPermissionsCoroutine(permissions.ToArray()));
-#endif
         }
         else
         {
-            StartCoroutine(CallOnRequestFileChooserPermissionsResult(true));
+            StartCoroutine(CallOnRequestFileChooserPermissionsResult(prevGrantedCount, permissions.Count));
         }
     }
 
-#if UNITY_2020_2_OR_NEWER
-#else
-    int mRequestPermissionPhase;
-
-    IEnumerator RequestFileChooserPermissionsCoroutine(string[] permissions)
-    {
-        foreach (var permission in permissions)
-        {
-            mRequestPermissionPhase = 0;
-            Permission.RequestUserPermission(permission);
-            // waiting permission dialog that may not be opened.
-            for (var i = 0; i < 8 && mRequestPermissionPhase == 0; i++)
-            {
-                yield return new WaitForSeconds(0.25f);
-            }
-            if (mRequestPermissionPhase == 0)
-            {
-                // permission dialog was not opened.
-                continue;
-            }
-            while (mRequestPermissionPhase == 1)
-            {
-                yield return new WaitForSeconds(0.3f);
-            }
-        }
-        yield return new WaitForSeconds(0.3f);
-        var granted = 0;
-        foreach (var permission in permissions)
-        {
-            if (Permission.HasUserAuthorizedPermission(permission))
-            {
-                granted++;
-            }
-        }
-        StartCoroutine(CallOnRequestFileChooserPermissionsResult(granted == permissions.Length));
-    }
-
-    void OnApplicationFocus(bool hasFocus)
-    {
-        if (hasFocus)
-        {
-            if (mRequestPermissionPhase == 1)
-            {
-                mRequestPermissionPhase = 2;
-            }
-        }
-        else
-        {
-            if (mRequestPermissionPhase == 0)
-            {
-                mRequestPermissionPhase = 1;
-            }
-        }
-    }
-#endif
-
-    private IEnumerator CallOnRequestFileChooserPermissionsResult(bool granted)
+    private IEnumerator CallOnRequestFileChooserPermissionsResult(int prevGrantedCnt, int grantedCnt)
     {
         for (var i = 0; i < 3; i++)
         {
             yield return null;
         }
+
+        bool granted = (prevGrantedCnt > 0) || (grantedCnt > 0);
+
         webView.Call("OnRequestFileChooserPermissionsResult", granted);
     }
 
@@ -644,9 +601,9 @@ public class WebViewObject : MonoBehaviour
         int radius = 0,
         // android
         int androidForceDarkMode = 0,  // 0: follow system setting, 1: force dark off, 2: force dark on
-        // ios
+                                       // ios
         bool enableWKWebView = true,
-        int  wkContentMode = 0,  // 0: recommended, 1: mobile, 2: desktop
+        int wkContentMode = 0,  // 0: recommended, 1: mobile, 2: desktop
         bool wkAllowsLinkPreview = true,
         bool wkAllowsBackForwardNavigationGestures = true,
         // editor
@@ -1362,7 +1319,7 @@ public class WebViewObject : MonoBehaviour
 #elif UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || UNITY_IPHONE
         if (webView == IntPtr.Zero)
             return null;
-        return _CWebViewPlugin_GetCustomHeaderValue(webView, headerKey);  
+        return _CWebViewPlugin_GetCustomHeaderValue(webView, headerKey);
 #elif UNITY_ANDROID
         if (webView == null)
             return null;
